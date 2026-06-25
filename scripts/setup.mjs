@@ -35,6 +35,9 @@ copyFileSync('.env', apiEnvPath);
 step('Installing dependencies');
 run('pnpm install');
 
+step('Generating Prisma client');
+run('pnpm --filter @ecom/api exec prisma generate');
+
 step('Starting Postgres, Redis and Nginx');
 run('pnpm infra:up');
 
