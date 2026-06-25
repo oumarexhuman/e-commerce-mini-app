@@ -43,7 +43,7 @@ docker-compose.yml    postgres + redis + nginx
 
 ## Running locally
 
-Requirements: **Node 20+**, **pnpm 9+**, **Docker** (Desktop or daemon running).
+Requirements: **Node 22.13+**, **pnpm 11+**, **Docker** (Desktop or daemon running).
 
 The fastest path is the setup script, which copies `.env`, generates fresh
 `ENCRYPTION_KEY` and `CSRF_SECRET`, brings up Postgres + Redis + Nginx, applies
