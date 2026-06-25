@@ -76,8 +76,9 @@ If you prefer to run the steps yourself:
 
 ```bash
 cp .env.example .env
+cp .env apps/api/.env                       # Prisma CLI and NestJS read .env from cwd
 # optionally regenerate secrets:
-#   openssl rand -hex 32  -> set as ENCRYPTION_KEY
+#   openssl rand -hex 32  -> set as ENCRYPTION_KEY (in both .env files)
 #   openssl rand -hex 32  -> set as CSRF_SECRET
 pnpm install
 pnpm infra:up

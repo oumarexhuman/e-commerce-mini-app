@@ -1,5 +1,6 @@
 import { execSync } from 'node:child_process';
-import { existsSync, copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
 function step(title) {
@@ -25,6 +26,11 @@ function ensureEnvFile() {
 }
 
 ensureEnvFile();
+
+step('Syncing .env into apps/api (so Prisma and NestJS find it)');
+const apiEnvPath = 'apps/api/.env';
+mkdirSync(dirname(apiEnvPath), { recursive: true });
+copyFileSync('.env', apiEnvPath);
 
 step('Installing dependencies');
 run('pnpm install');
