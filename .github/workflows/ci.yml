@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @ecom/api db:generate
+        env:
+          DATABASE_URL: postgresql://stub:stub@localhost:5432/stub
+
+      - name: Typecheck
+        run: pnpm --filter @ecom/api typecheck
+
+      - name: Unit tests
+        run: pnpm --filter @ecom/api test
+
+      - name: Build
+        run: pnpm --filter @ecom/api build
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @ecom/web typecheck
+
+      - name: Build
+        run: pnpm --filter @ecom/web build
+        env:
+          API_INTERNAL_URL: http://localhost:4000
+
+  docker:
+    name: docker compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copy env stub
+        run: cp .env.example .env
+      - name: Validate compose
+        run: docker compose config --quiet
