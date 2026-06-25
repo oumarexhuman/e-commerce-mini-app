@@ -99,6 +99,65 @@ pnpm --filter @ecom/api test    # unit tests, mocked Prisma, no DB needed
 pnpm infra:down                 # stops and removes Postgres / Redis / Nginx
 ```
 
+### Infrastructure
+
+`docker-compose.yml` defines three services. All ports are non-default so they will not
+clash with anything else already running on your machine.
+
+| Service  | Container       | Host port → container port | Purpose |
+| -------- | --------------- | -------------------------- | --- |
+| Postgres | `ecom_postgres` | `5436` → `5432`            | data store |
+| Redis    | `ecom_redis`    | `6380` → `6379`            | throttler + short-lived state |
+| Nginx    | `ecom_nginx`    | `8085` → `80`              | reverse proxy with security headers |
+
+The api process listens on `:4000`, the web dev server on `:3000`. Nginx fronts both at
+`http://localhost:8085`.
+
+### If something gets stuck
+
+The most common causes of "it was working a minute ago" are a stale Node process holding
+port 4000 or 3000, or a half-stopped Docker container. Reset cleanly with:
+
+```bash
+pnpm infra:down                                   # remove containers + volumes
+pkill -f "nest start" 2>/dev/null                 # kill api dev
+pkill -f "next dev"  2>/dev/null                  # kill web dev
+pkill -f "node.*dist/main.js" 2>/dev/null         # kill any built api
+```
+
+Then start over:
+
+```bash
+pnpm setup
+pnpm dev
+```
+
+A few specific symptoms and what they usually mean:
+
+- **`Cannot connect to the Docker daemon`** — Docker Desktop is not running. Open it
+  from Applications, wait until the menu-bar icon says "running", then re-run.
+- **`Bind for 0.0.0.0:5436 failed: port is already allocated`** — another Postgres is
+  already bound to 5436. Either stop that one or change `POSTGRES_PORT` in `.env` and
+  `docker-compose.yml`.
+- **`Failed to proxy http://localhost:4000`** in the `apps/web dev` log — the api did
+  not start. Scroll up in the same terminal for the real api error (usually a TypeScript
+  error from a stale Prisma client; `pnpm --filter @ecom/api exec prisma generate` fixes
+  it).
+- **`Invalid credentials` even with the seeded password** — usually means the api is
+  running against a different `ENCRYPTION_KEY` than the one that seeded the database.
+  Restart the dev servers (`Ctrl+C` then `pnpm dev`) so the api re-reads `apps/api/.env`.
+- **`Too many failed attempts`** — the brute-force protection has kicked in. Either wait
+  15 minutes or clear it with
+  `docker exec ecom_redis redis-cli FLUSHALL && docker exec ecom_postgres psql -U ecom -d ecom -c "DELETE FROM login_attempts;"`.
+
+### Re-seeding from scratch
+
+If you want a fresh database without changing anything else:
+
+```bash
+pnpm --filter @ecom/api db:reset --force          # drops schema, re-migrates, re-seeds
+```
+
 ## Architecture notes
 
 ### Authentication
